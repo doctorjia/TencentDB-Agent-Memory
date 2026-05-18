@@ -1,0 +1,17 @@
+# Real SWE-bench Lite JSON format test input
+# astropy__astropy-14182: RST writer does not support header_rows parameter
+#
+# Format: Python literal (use ast.literal_eval() to parse, NOT json.loads())
+# This is the actual format used by the TDAI plugin's SWE-bench test scripts
+
+[
+  {
+    "instance_id": "astropy__astropy-14182",
+    "repo": "astropy/astropy",
+    "base_commit": "193f3123b0e16f1bfc06d0f80f8f9a51a9f3e9d9",
+    "patch": "--- a/astropy/io/ascii/rst.py\n+++ b/astropy/io/ascii/rst.py\n@@ -51,10 +51,11 @@ class SimpleRSTData(ascii.BasicData):\n     def __init__(self, row_width, header_rows=1, **kwargs):\n         self.row_width = row_width\n-        self.start_line = 3  # Hardcoded: RST data starts at line 3\n+        self.start_line = 2 + header_rows  # Dynamic based on header_rows\n         super().__init__(**kwargs)\n\n class RST(ascii.BaseReader):\n-    def __init__(self, **kwargs):\n+    def __init__(self, header_rows=1, **kwargs):\n         ascii.BaseReader.__init__(self, **kwargs)\n-        self.data.splitter = ascii.FixedWidthSplitter()\n+        self.data.start_line = 2 + header_rows",
+    "test_patch": "--- a/astropy/io/ascii/tests/test_rst.py\n+++ b/astropy/io/ascii/tests/test_rst.py\n@@ +20,6 test_rst_with_header_rows():\n+    from io import StringIO\n+    from astropy.io import ascii as acc\n+    data = \"\"\"name unit\n+alpha m\n+beta  kg\"\"\"\n+    tbl = acc.read(StringIO(data), format='rst', header_rows=['name', 'unit'])\n+    assert tbl.colnames == ['name', 'unit']",
+    "problem_statement": "RST (reStructuredText) table writer does not support header_rows parameter.\nWhen using astropy.io.ascii.write() with format='rst' and header_rows=['name', 'unit'],\na TypeError is raised: 'RST' object does not accept header_rows argument.\n\nThe RST reader/writer in astropy/io/ascii/rst.py has hardcoded start_line=3,\nwhich does not adapt to different header row counts.\n\nExpected behavior: RST writer should accept header_rows parameter to support\nmulti-row headers like:\n  name unit\n  alpha m\n  beta kg\n\nActual behavior: TypeError: RST() got an unexpected keyword argument 'header_rows'",
+    "FAIL_TO_PASS": "test_rst_with_header_rows"
+  }
+]
